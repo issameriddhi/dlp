@@ -1,0 +1,81 @@
+#RNN / LSTM — Sentiment Analysis
+
+import numpy as np
+import matplotlib.pyplot as plt
+from tensorflow import keras
+from tensorflow.keras import layers
+from tensorflow.keras.datasets import imdb
+from tensorflow.keras.preprocessing.sequence import pad_sequences
+
+# Load IMDB dataset
+(X_train, y_train), (X_test, y_test) = imdb.load_data(num_words=10000)
+
+# Padding
+X_train = pad_sequences(X_train, maxlen=200)
+X_test = pad_sequences(X_test, maxlen=200)
+
+# RNN Model
+rnn = keras.Sequential([
+    layers.Input(shape=(200,)),
+    layers.Embedding(10000, 32),
+    layers.SimpleRNN(32),
+    layers.Dense(1, activation="sigmoid")
+])
+
+# LSTM Model
+lstm = keras.Sequential([
+    layers.Input(shape=(200,)),
+    layers.Embedding(10000, 32),
+    layers.LSTM(32),
+    layers.Dense(1, activation="sigmoid")
+])
+
+# Train both models
+histories = []
+for model in [rnn, lstm]:
+    model.compile(optimizer="adam",
+                  loss="binary_crossentropy",
+                  metrics=["accuracy"])
+
+    h = model.fit(X_train, y_train,
+                  epochs=3, batch_size=128,
+                  validation_split=0.2)
+    histories.append(h)
+
+# Evaluate
+for name, model in zip(["RNN", "LSTM"], [rnn, lstm]):
+    loss, acc = model.evaluate(X_test, y_test, verbose=0)
+    print(name, "Test Accuracy:", round(acc, 4))
+
+# Plot Accuracy
+for name, h in zip(["RNN", "LSTM"], histories):
+    plt.plot(h.history["val_accuracy"], label=name)
+
+plt.title("RNN vs LSTM Validation Accuracy")
+plt.xlabel("Epochs")
+plt.ylabel("Accuracy")
+plt.legend()
+plt.show()
+
+# Plot Loss
+for name, h in zip(["RNN", "LSTM"], histories):
+    plt.plot(h.history["val_loss"], label=name)
+
+plt.title("RNN vs LSTM Validation Loss")
+plt.xlabel("Epochs")
+plt.ylabel("Loss")
+plt.legend()
+plt.show()
+
+# Predict sentiment
+prediction = lstm.predict(X_test[:1], verbose=0)[0][0]
+print("Predicted Sentiment:",
+      "Positive" if prediction >= 0.5 else "Negative")
+print("Actual Sentiment:",
+      "Positive" if y_test[0] == 1 else "Negative")
+
+
+#Interpretation (2 lines)
+#1. Both RNN and LSTM classify IMDB movie reviews as positive or negative by learning patterns from word sequences.
+#2. LSTM can remember long-term information more effectively than Simple RNN; the test accuracies show which model performed better in this experiment.
+#Important for practical exam: Embedding() converts word indices into vectors, pad_sequences() makes reviews the same length, and sigmoid gives a probability for binary sentiment classification.
