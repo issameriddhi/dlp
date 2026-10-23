@@ -1,0 +1,79 @@
+#Autoencoders
+
+import numpy as np
+import matplotlib.pyplot as plt
+from tensorflow import keras
+from tensorflow.keras import layers
+
+# Load MNIST dataset
+(X_train, _), (X_test, _) = keras.datasets.mnist.load_data()
+
+# Preprocessing
+X_train = X_train.astype("float32") / 255
+X_test = X_test.astype("float32") / 255
+
+X_train = X_train.reshape(-1, 784)
+X_test = X_test.reshape(-1, 784)
+
+# Autoencoder Model
+model = keras.Sequential([
+    layers.Input(shape=(784,)),
+    layers.Dense(128, activation="relu"),
+    layers.Dense(32, activation="relu"),
+    layers.Dense(128, activation="relu"),
+    layers.Dense(784, activation="sigmoid")
+])
+
+# Compile
+model.compile(optimizer="adam", loss="binary_crossentropy")
+model.summary()
+
+# Train
+history = model.fit(
+    X_train, X_train,
+    epochs=10, batch_size=256,
+    validation_split=0.2
+)
+
+# Evaluate
+loss = model.evaluate(X_test, X_test, verbose=0)
+print("Test Reconstruction Loss:", loss)
+
+# Reconstruct Images
+reconstructed = model.predict(X_test[:5], verbose=0)
+
+# Original vs Reconstructed Images
+plt.figure(figsize=(10, 4))
+
+for i in range(5):
+    plt.subplot(2, 5, i + 1)
+    plt.imshow(X_test[i].reshape(28, 28), cmap="gray")
+    plt.title("Original")
+    plt.axis("off")
+
+    plt.subplot(2, 5, i + 6)
+    plt.imshow(reconstructed[i].reshape(28, 28), cmap="gray")
+    plt.title("Reconstructed")
+    plt.axis("off")
+
+plt.tight_layout()
+plt.show()
+
+# Loss Plot
+plt.plot(history.history["loss"], label="Training")
+plt.plot(history.history["val_loss"], label="Validation")
+plt.xlabel("Epochs")
+plt.ylabel("Loss")
+plt.title("Autoencoder Training Loss")
+plt.legend()
+plt.show()
+
+
+#Interpretation (2 lines)
+#1. The Autoencoder compresses MNIST images into a smaller representation and reconstructs them using the decoder.
+#2. The original and reconstructed images show reconstruction quality, while decreasing loss indicates that the model is learning to reproduce the input.
+#Important for practical exam:
+#- Dense(128) and Dense(32) — Encoder compresses the image.
+#- Dense(32) — Bottleneck or latent representation.
+#- Dense(128) and Dense(784) — Decoder reconstructs the image.
+#- model.fit(X_train, X_train) — The input and target are the same because an Autoencoder learns to reconstruct its input.
