@@ -1,0 +1,74 @@
+#LSTM — Text Generation
+
+import numpy as np
+import matplotlib.pyplot as plt
+from tensorflow import keras
+from tensorflow.keras import layers
+
+# Sample text
+text = ("deep learning is a part of artificial intelligence. "
+        "lstm is used for text generation. "
+        "neural networks learn patterns from data. ") * 50
+
+# Character encoding
+chars = sorted(set(text))
+char_to_idx = {c: i for i, c in enumerate(chars)}
+idx_to_char = {i: c for c, i in char_to_idx.items()}
+
+# Prepare sequences
+X, y = [], []
+seq_len = 20
+
+for i in range(len(text) - seq_len):
+    X.append([char_to_idx[c] for c in text[i:i+seq_len]])
+    y.append(char_to_idx[text[i+seq_len]])
+
+X = np.array(X)
+y = np.array(y)
+
+# LSTM Model
+model = keras.Sequential([
+    layers.Input(shape=(seq_len,)),
+    layers.Embedding(len(chars), 32),
+    layers.LSTM(64),
+    layers.Dense(len(chars), activation="softmax")
+])
+
+model.compile(optimizer="adam",
+              loss="sparse_categorical_crossentropy",
+              metrics=["accuracy"])
+
+model.summary()
+
+# Train model
+history = model.fit(X, y, epochs=10, batch_size=64)
+
+# Generate text
+seed = "deep learning is a pa"
+generated = seed
+
+for i in range(100):
+    sequence = np.array([[char_to_idx[c] for c in generated[-seq_len:]]])
+    prediction = model.predict(sequence, verbose=0)
+    next_char = idx_to_char[np.argmax(prediction)]
+    generated += next_char
+
+print("Generated Text:\n", generated)
+
+# Loss Plot
+plt.plot(history.history["loss"])
+plt.xlabel("Epochs")
+plt.ylabel("Loss")
+plt.title("LSTM Training Loss")
+plt.show()
+
+
+
+#Interpretation (2 lines)
+#1. The LSTM model learns character sequences from the training text and predicts the next character to generate new text.
+#2. The training loss graph shows learning progress; decreasing loss indicates that the model is improving its next-character predictions.
+#Important for practical exam:
+#- Embedding() — Converts character indices into vectors.
+#- LSTM(64) — Learns sequential patterns.
+#- Dense(..., activation="softmax") — Predicts probabilities for the next character.
+#- argmax() — Selects the most probable character.
