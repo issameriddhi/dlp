@@ -1,0 +1,102 @@
+#Multiple Inputs + Auxiliary Output — California Housing Dataset
+
+import numpy as np
+import matplotlib.pyplot as plt
+from tensorflow import keras
+from tensorflow.keras import layers
+from sklearn.datasets import fetch_california_housing
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import mean_squared_error, r2_score
+
+# Load dataset
+data = fetch_california_housing()
+X, y = data.data, data.target
+
+# Split dataset
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
+
+# Scaling
+sc = StandardScaler()
+X_train = sc.fit_transform(X_train)
+X_test = sc.transform(X_test)
+
+# Multiple inputs
+X_train_A, X_train_B = X_train[:, :5], X_train[:, 5:]
+X_test_A, X_test_B = X_test[:, :5], X_test[:, 5:]
+
+# Functional API Model
+input_A = keras.Input(shape=(5,))
+input_B = keras.Input(shape=(3,))
+
+hidden1 = layers.Dense(30, activation="relu")(input_A)
+hidden2 = layers.Dense(30, activation="relu")(hidden1)
+
+combined = layers.Concatenate()([hidden2, input_B])
+hidden3 = layers.Dense(30, activation="relu")(combined)
+
+main_output = layers.Dense(1, name="main")(hidden3)
+aux_output = layers.Dense(1, name="aux")(hidden2)
+
+model = keras.Model(
+    inputs=[input_A, input_B],
+    outputs=[main_output, aux_output]
+)
+
+# Compile
+model.compile(
+    optimizer="adam",
+    loss={"main": "mse", "aux": "mse"},
+    loss_weights={"main": 0.9, "aux": 0.1}
+)
+
+model.summary()
+
+# Train
+history = model.fit(
+    [X_train_A, X_train_B],
+    {"main": y_train, "aux": y_train},
+    epochs=30, batch_size=32,
+    validation_split=0.2, verbose=0
+)
+
+# Evaluate
+results = model.evaluate(
+    [X_test_A, X_test_B],
+    {"main": y_test, "aux": y_test},
+    verbose=0
+)
+print("Test Results:", results)
+
+# Predictions
+main_pred, aux_pred = model.predict(
+    [X_test_A, X_test_B], verbose=0
+)
+
+print("Main MSE:", mean_squared_error(y_test, main_pred))
+print("Main R2 Score:", r2_score(y_test, main_pred))
+
+# Loss Plot
+plt.plot(history.history["loss"], label="Training Loss")
+plt.plot(history.history["val_loss"], label="Validation Loss")
+plt.xlabel("Epochs")
+plt.ylabel("Loss")
+plt.title("Training vs Validation Loss")
+plt.legend()
+plt.show()
+
+# Actual vs Predicted
+plt.scatter(y_test, main_pred.ravel(), alpha=0.4)
+plt.plot([y.min(), y.max()], [y.min(), y.max()], "r--")
+plt.xlabel("Actual Price")
+plt.ylabel("Predicted Price")
+plt.title("Actual vs Predicted House Prices")
+plt.show()
+
+
+#Interpretation (2 lines)
+#1. The model uses two input branches and produces a main output and an auxiliary output to predict California house prices.
+#2. The auxiliary output provides an additional training signal, while the main output's MSE and R² measure prediction performance.
+#Important for practical exam: The key difference from the previous multiple-input model is the addition of aux_output and loss_weights. The main output gets 90% weight, and the auxiliary output gets 10% weight in the combined training loss.
